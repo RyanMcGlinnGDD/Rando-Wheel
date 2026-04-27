@@ -26,7 +26,7 @@ Rando-Wheel is a standalone SPA that replicates the spinning wheel from the gues
 
 React Context + `useReducer`. A `WheelProvider` wraps the TanStack Router root layout and exposes state and dispatch to all children.
 
-A `useEffect` syncs the full state to `localStorage` on every change. On mount, state is hydrated from `localStorage`; if no saved state exists the app starts with an empty entry list.
+A `useEffect` syncs only the persistent slice of state to `localStorage` when it changes: `entries`, `removeOnSelect`, and the three color values. Ephemeral wheel state (`wheelStatus`, `winnerId`, `previousEndDegree`, `selectionOffset`) is excluded — it doesn't need to survive a page reload and would cause unnecessary writes during every spin interaction. On mount, the persistent slice is hydrated from `localStorage`; ephemeral state always initializes to its defaults.
 
 ### State Shape
 
