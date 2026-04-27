@@ -53,6 +53,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       if (!state.removeOnSelect) {
         return { ...state, wheelStatus: 'inactive', winnerId: null }
       }
+      const { winnerId } = state
       const includedCount = state.entries.filter(e => e.included).length
       const spunOutCount = state.entries.filter(e => e.included && e.spunOut).length
       const shouldReset = spunOutCount >= includedCount - 1
@@ -63,7 +64,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         entries: shouldReset
           ? state.entries.map(e => ({ ...e, spunOut: false }))
           : state.entries.map(e =>
-              e.id === state.winnerId ? { ...e, spunOut: true } : e,
+              e.id === winnerId ? { ...e, spunOut: true } : e,
             ),
       }
     }
