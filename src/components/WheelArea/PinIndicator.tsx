@@ -1,39 +1,32 @@
 import { useWheelState } from '../../context/WheelContext'
 
-const PIN_SRC = '/pin.png'
+interface Props {
+  spinHovered: boolean
+}
 
-export function PinIndicator() {
-  const { wheelStatus } = useWheelState()
-  const isActive = wheelStatus !== 'inactive'
+export function PinIndicator({ spinHovered }: Props) {
+  const { entries, colorTertiary } = useWheelState()
+  const isVisible = entries.length >= 1
+
+  if (!isVisible) return null
 
   return (
     <div
       style={{
         position: 'fixed',
         left: '50%',
-        top: '50%',
-        translate: 'calc(-50% + 0.1vw) -50%',
+        top: 'calc(50% - var(--w) / 2 - var(--w) * 2.4 / 39 + 10px)',
+        translate: '-50% 0',
+        width: 'calc(var(--w) * 5.4 / 39)',
+        height: 'calc(var(--w) * 4.8 / 39)',
+        clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)',
+        backgroundColor: colorTertiary,
+        transform: spinHovered ? 'scale(1.05)' : 'scale(1)',
+        transformOrigin: 'top center',
+        transition: 'transform 0.2s',
         pointerEvents: 'none',
         zIndex: 14,
       }}
-    >
-      <img
-        src={PIN_SRC}
-        alt="pin"
-        style={{
-          height: '7vw',
-          translate: '0 -22vw',
-          transition: 'transform 0.25s',
-          transform: isActive ? undefined : 'translateX(45vw) translateY(4vw) rotate(-15deg)',
-          animation: isActive ? 'pinBounce 1s ease-in-out infinite' : undefined,
-        }}
-      />
-      <style>{`
-        @keyframes pinBounce {
-          0%, 100% { translate: 0 -22vw; }
-          50% { translate: 0 -21vw; }
-        }
-      `}</style>
-    </div>
+    />
   )
 }

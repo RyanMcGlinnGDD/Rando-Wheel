@@ -6,11 +6,11 @@ interface Props {
 
 export function Shader({ onClick }: Props) {
   const { wheelStatus } = useWheelState()
-  const isInactive = wheelStatus === 'inactive'
+  const isInactive = wheelStatus !== 'spun'
 
   return (
     <div
-      onMouseUp={onClick}
+      onMouseUp={e => { if (e.button === 0) onClick() }}
       style={{
         position: 'fixed',
         inset: 0,
