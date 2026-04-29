@@ -1,12 +1,18 @@
+import { type Ref } from 'react'
 import { Stack, Text, Center } from '@mantine/core'
 import { useWheelState } from '../../context/WheelContext'
-import { AddEntryForm } from './AddEntryForm'
+import { AddEntryForm, type AddEntryFormHandle } from './AddEntryForm'
 import { EntryList } from './EntryList'
 import { SidebarControls } from './SidebarControls'
 
-export function EntrySidebar() {
-  const { entries } = useWheelState()
+interface Props {
+  addEntryFormRef: Ref<AddEntryFormHandle>
+}
+
+export function EntrySidebar({ addEntryFormRef }: Props) {
+  const { entries, wheelStatus } = useWheelState()
   const isEmpty = entries.length === 0
+  const disabled = wheelStatus !== 'inactive'
 
   return (
     <Stack
@@ -21,21 +27,21 @@ export function EntrySidebar() {
         overflow: 'hidden',
       }}
     >
-      <AddEntryForm />
+      <AddEntryForm ref={addEntryFormRef} disabled={disabled} />
 
       {isEmpty ? (
         <Center flex={1}>
           <Text c="dimmed" size="sm" ta="center">
-            Add names above to get started.
+            Add entries above to get started.
             <br />
             They will appear on the wheel.
           </Text>
         </Center>
       ) : (
-        <EntryList />
+        <EntryList disabled={disabled} />
       )}
 
-      <SidebarControls />
+      <SidebarControls disabled={disabled} />
     </Stack>
   )
 }
