@@ -21,18 +21,15 @@
 .segment {
   align-content: center;
   display: grid;
-  font-size: 3.5cqi;
   font-weight: bold;
   grid-area: 1 / -1;
-  padding-left: 1.5vw;
+  padding-left: calc(var(--w) * 1.5 / 39);
   box-sizing: border-box;
   transform-origin: center right;
   width: 50cqi;
   white-space: nowrap;
   letter-spacing: 0.2vh;
-  clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
   rotate: calc(360deg / var(--items) * calc(var(--idx) - 1));
-  aspect-ratio: 1 / calc(2 * tan(180deg / var(--items)));
 }
 
 .segment p {
@@ -44,13 +41,15 @@
 .fastTransition {
   transition:
     background-color 0.35s linear 0.25s,
-    color 0.35s linear 0.25s;
+    color 0.35s linear 0.25s,
+    opacity 0.4s;
 }
 
 .instantTransition {
   transition:
     background-color 0.1s linear,
-    color 0.1s linear;
+    color 0.1s linear,
+    opacity 0.1s;
 }
 
 .dimmedText p {
