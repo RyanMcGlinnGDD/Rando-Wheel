@@ -13,28 +13,19 @@ const STORAGE_KEY = 'rando-wheel-state'
 
 type PersistentSlice = Pick<
   WheelState,
-  'entries' | 'removeOnSelect' | 'colorPrimary' | 'colorSecondary' | 'colorWinner'
+  'entries' | 'removeOnSelect' | 'colorPrimary' | 'colorSecondary' | 'colorTertiary'
 >
 
 function loadFromStorage(): Partial<WheelState> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return {}
-    return JSON.parse(raw) as PersistentSlice
+    const parsed = JSON.parse(raw) as PersistentSlice
+    // Ensure entries from older stored data always have included defined
+    return { ...parsed, entries: parsed.entries?.map(e => ({ included: true, ...e })) ?? [] }
   } catch {
     return {}
   }
-}
-
-function saveToStorage(state: WheelState): void {
-  const slice: PersistentSlice = {
-    entries: state.entries,
-    removeOnSelect: state.removeOnSelect,
-    colorPrimary: state.colorPrimary,
-    colorSecondary: state.colorSecondary,
-    colorWinner: state.colorWinner,
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(slice))
 }
 
 const WheelStateContext = createContext<WheelState | null>(null)
@@ -46,9 +37,11 @@ export function WheelProvider({ children }: { children: ReactNode }) {
     ...loadFromStorage(),
   })
 
+  const { entries, removeOnSelect, colorPrimary, colorSecondary, colorTertiary } = state
   useEffect(() => {
-    saveToStorage(state)
-  }, [state.entries, state.removeOnSelect, state.colorPrimary, state.colorSecondary, state.colorWinner])
+    const slice: PersistentSlice = { entries, removeOnSelect, colorPrimary, colorSecondary, colorTertiary }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slice))
+  }, [entries, removeOnSelect, colorPrimary, colorSecondary, colorTertiary])
 
   return (
     <WheelStateContext.Provider value={state}>
@@ -59,12 +52,14 @@ export function WheelProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useWheelState(): WheelState {
   const ctx = useContext(WheelStateContext)
   if (!ctx) throw new Error('useWheelState must be used inside WheelProvider')
   return ctx
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useWheelDispatch(): Dispatch<WheelAction> {
   const ctx = useContext(WheelDispatchContext)
   if (!ctx) throw new Error('useWheelDispatch must be used inside WheelProvider')

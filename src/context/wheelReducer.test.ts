@@ -6,16 +6,15 @@ const makeEntry = (overrides: Partial<Entry> = {}): Entry => ({
   id: crypto.randomUUID(),
   name: 'Alice',
   included: true,
-  spunOut: false,
   ...overrides,
 })
 
 describe('wheelReducer', () => {
   describe('ADD_ENTRY', () => {
-    it('adds an entry with included=true and spunOut=false', () => {
+    it('adds an entry with included=true', () => {
       const next = wheelReducer(initialState, { type: 'ADD_ENTRY', name: 'Alice' })
       expect(next.entries).toHaveLength(1)
-      expect(next.entries[0]).toMatchObject({ name: 'Alice', included: true, spunOut: false })
+      expect(next.entries[0]).toMatchObject({ name: 'Alice', included: true })
       expect(next.entries[0].id).toBeTruthy()
     })
 
@@ -40,6 +39,14 @@ describe('wheelReducer', () => {
       const next = wheelReducer(state, { type: 'REMOVE_ENTRY', id: a.id })
       expect(next.entries).toHaveLength(1)
       expect(next.entries[0].name).toBe('Bob')
+    })
+
+    it('re-includes all entries when the last checked entry is removed', () => {
+      const checked = makeEntry({ included: true })
+      const unchecked = makeEntry({ included: false })
+      const state: WheelState = { ...initialState, entries: [checked, unchecked] }
+      const next = wheelReducer(state, { type: 'REMOVE_ENTRY', id: checked.id })
+      expect(next.entries[0].included).toBe(true)
     })
   })
 
@@ -66,27 +73,22 @@ describe('wheelReducer', () => {
     })
   })
 
-  describe('ACTIVATE_WHEEL', () => {
-    it('sets wheelStatus to active', () => {
-      const next = wheelReducer(initialState, { type: 'ACTIVATE_WHEEL' })
-      expect(next.wheelStatus).toBe('active')
+  describe('BEGIN_SPIN', () => {
+    it('sets wheelStatus to spun with null winnerId', () => {
+      const entry = makeEntry()
+      const state: WheelState = { ...initialState, entries: [entry] }
+      const next = wheelReducer(state, { type: 'BEGIN_SPIN' })
+      expect(next.winnerId).toBeNull()
+      expect(next.wheelStatus).toBe('spun')
     })
   })
 
-  describe('BEGIN_SPIN', () => {
-    it('sets winnerId, degrees, offset, and wheelStatus to spun', () => {
+  describe('REVEAL_WINNER', () => {
+    it('sets winnerId', () => {
       const entry = makeEntry()
-      const state: WheelState = { ...initialState, entries: [entry] }
-      const next = wheelReducer(state, {
-        type: 'BEGIN_SPIN',
-        winnerId: entry.id,
-        previousEndDegree: 1800,
-        selectionOffset: 0,
-      })
+      const state: WheelState = { ...initialState, wheelStatus: 'spun', winnerId: null }
+      const next = wheelReducer(state, { type: 'REVEAL_WINNER', winnerId: entry.id })
       expect(next.winnerId).toBe(entry.id)
-      expect(next.previousEndDegree).toBe(1800)
-      expect(next.selectionOffset).toBe(0)
-      expect(next.wheelStatus).toBe('spun')
     })
   })
 
@@ -105,21 +107,20 @@ describe('wheelReducer', () => {
       expect(next.winnerId).toBeNull()
     })
 
-    it('does not mark spunOut when removeOnSelect is false', () => {
+    it('does not uncheck entries when removeOnSelect is false', () => {
       const entry = makeEntry()
       const state: WheelState = {
         ...initialState,
         entries: [entry],
         wheelStatus: 'spun',
         winnerId: entry.id,
-        selectionOffset: 0,
         removeOnSelect: false,
       }
       const next = wheelReducer(state, { type: 'CONFIRM_SPIN' })
-      expect(next.entries[0].spunOut).toBe(false)
+      expect(next.entries[0].included).toBe(true)
     })
 
-    it('marks winner as spunOut when removeOnSelect is true and pool is not exhausted', () => {
+    it('unchecks winner when removeOnSelect is true and pool is not exhausted', () => {
       const winner = makeEntry({ name: 'Alice' })
       const other = makeEntry({ name: 'Bob' })
       const state: WheelState = {
@@ -127,48 +128,38 @@ describe('wheelReducer', () => {
         entries: [winner, other],
         wheelStatus: 'spun',
         winnerId: winner.id,
-        selectionOffset: 0,
         removeOnSelect: true,
       }
       const next = wheelReducer(state, { type: 'CONFIRM_SPIN' })
-      expect(next.entries.find(e => e.id === winner.id)?.spunOut).toBe(true)
-      expect(next.entries.find(e => e.id === other.id)?.spunOut).toBe(false)
+      expect(next.entries.find(e => e.id === winner.id)?.included).toBe(false)
+      expect(next.entries.find(e => e.id === other.id)?.included).toBe(true)
     })
 
-    it('resets all spunOut flags when the last included entry wins', () => {
-      const winner = makeEntry({ name: 'Alice', spunOut: false })
-      const exhausted = makeEntry({ name: 'Bob', spunOut: true })
+    it('re-includes all entries when the last included entry wins', () => {
+      const winner = makeEntry({ name: 'Alice', included: true })
+      const unchecked = makeEntry({ name: 'Bob', included: false })
       const state: WheelState = {
         ...initialState,
-        entries: [winner, exhausted],
+        entries: [winner, unchecked],
         wheelStatus: 'spun',
         winnerId: winner.id,
-        selectionOffset: 0,
         removeOnSelect: true,
       }
       const next = wheelReducer(state, { type: 'CONFIRM_SPIN' })
-      expect(next.entries.every(e => !e.spunOut)).toBe(true)
-    })
-  })
-
-  describe('DISMISS_WHEEL', () => {
-    it('sets wheelStatus to inactive', () => {
-      const state: WheelState = { ...initialState, wheelStatus: 'active' }
-      const next = wheelReducer(state, { type: 'DISMISS_WHEEL' })
-      expect(next.wheelStatus).toBe('inactive')
+      expect(next.entries.every(e => e.included)).toBe(true)
     })
   })
 
   describe('RESET_SPUN_OUT', () => {
-    it('clears spunOut on all entries', () => {
+    it('re-includes all entries', () => {
       const entries = [
-        makeEntry({ spunOut: true }),
-        makeEntry({ spunOut: true }),
-        makeEntry({ spunOut: false }),
+        makeEntry({ included: false }),
+        makeEntry({ included: false }),
+        makeEntry({ included: true }),
       ]
       const state: WheelState = { ...initialState, entries }
       const next = wheelReducer(state, { type: 'RESET_SPUN_OUT' })
-      expect(next.entries.every(e => !e.spunOut)).toBe(true)
+      expect(next.entries.every(e => e.included)).toBe(true)
     })
   })
 
@@ -177,6 +168,20 @@ describe('wheelReducer', () => {
       const state: WheelState = { ...initialState, entries: [makeEntry(), makeEntry()] }
       const next = wheelReducer(state, { type: 'CLEAR_ALL' })
       expect(next.entries).toHaveLength(0)
+    })
+  })
+
+  describe('SET_COLORS', () => {
+    it('updates all three color values', () => {
+      const next = wheelReducer(initialState, {
+        type: 'SET_COLORS',
+        colorPrimary: '#ff0000',
+        colorSecondary: '#00ff00',
+        colorTertiary: '#0000ff',
+      })
+      expect(next.colorPrimary).toBe('#ff0000')
+      expect(next.colorSecondary).toBe('#00ff00')
+      expect(next.colorTertiary).toBe('#0000ff')
     })
   })
 })

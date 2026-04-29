@@ -5,11 +5,9 @@ export const initialState: WheelState = {
   removeOnSelect: false,
   wheelStatus: 'inactive',
   winnerId: null,
-  previousEndDegree: 0,
-  selectionOffset: 0,
-  colorPrimary: 'var(--mantine-color-blue-6)',
-  colorSecondary: 'var(--mantine-color-white)',
-  colorWinner: 'var(--mantine-color-red-7)',
+  colorPrimary: '#228be6',
+  colorSecondary: '#000000',
+  colorTertiary: '#c92a2a',
 }
 
 export function wheelReducer(state: WheelState, action: WheelAction): WheelState {
@@ -19,12 +17,18 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         ...state,
         entries: [
           ...state.entries,
-          { id: crypto.randomUUID(), name: action.name.trim(), included: true, spunOut: false },
+          { id: crypto.randomUUID(), name: action.name.trim(), included: true },
         ],
       }
 
-    case 'REMOVE_ENTRY':
-      return { ...state, entries: state.entries.filter(e => e.id !== action.id) }
+    case 'REMOVE_ENTRY': {
+      const remaining = state.entries.filter(e => e.id !== action.id)
+      const hasChecked = remaining.some(e => e.included)
+      return {
+        ...state,
+        entries: hasChecked ? remaining : remaining.map(e => ({ ...e, included: true })),
+      }
+    }
 
     case 'TOGGLE_INCLUDED':
       return {
@@ -37,17 +41,11 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
     case 'SET_REMOVE_ON_SELECT':
       return { ...state, removeOnSelect: action.value }
 
-    case 'ACTIVATE_WHEEL':
-      return { ...state, wheelStatus: 'active' }
-
     case 'BEGIN_SPIN':
-      return {
-        ...state,
-        wheelStatus: 'spun',
-        winnerId: action.winnerId,
-        previousEndDegree: action.previousEndDegree,
-        selectionOffset: action.selectionOffset,
-      }
+      return { ...state, wheelStatus: 'spun', winnerId: null }
+
+    case 'REVEAL_WINNER':
+      return { ...state, winnerId: action.winnerId }
 
     case 'CONFIRM_SPIN': {
       if (!state.removeOnSelect) {
@@ -55,25 +53,21 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       }
       const { winnerId } = state
       const includedCount = state.entries.filter(e => e.included).length
-      const spunOutCount = state.entries.filter(e => e.included && e.spunOut).length
-      const shouldReset = spunOutCount >= includedCount - 1
+      const shouldReset = includedCount <= 1
       return {
         ...state,
         wheelStatus: 'inactive',
         winnerId: null,
         entries: shouldReset
-          ? state.entries.map(e => ({ ...e, spunOut: false }))
+          ? state.entries.map(e => ({ ...e, included: true }))
           : state.entries.map(e =>
-              e.id === winnerId ? { ...e, spunOut: true } : e,
+              e.id === winnerId ? { ...e, included: false } : e,
             ),
       }
     }
 
-    case 'DISMISS_WHEEL':
-      return { ...state, wheelStatus: 'inactive' }
-
     case 'RESET_SPUN_OUT':
-      return { ...state, entries: state.entries.map(e => ({ ...e, spunOut: false })) }
+      return { ...state, entries: state.entries.map(e => ({ ...e, included: true })) }
 
     case 'CLEAR_ALL':
       return { ...state, entries: [] }
@@ -83,7 +77,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         ...state,
         colorPrimary: action.colorPrimary,
         colorSecondary: action.colorSecondary,
-        colorWinner: action.colorWinner,
+        colorTertiary: action.colorTertiary,
       }
 
     default:
